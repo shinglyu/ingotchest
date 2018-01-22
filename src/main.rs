@@ -5,7 +5,7 @@ use iron::prelude::*;
 use iron::status;
 use router::Router;
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, remove_file};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -40,8 +40,10 @@ fn main() {
     }
 
     fn put(req: &mut Request) -> IronResult<Response> {
+        // TODO: Extract the key getting logic
         let route_info = req.extensions.get::<Router>().unwrap();
         let ref key = route_info.find("key").unwrap_or("");
+        // TODO: Do not allow file not in the current dir
         let key_path = get_path(key);
         let mut payload = String::new();
         req.body.read_to_string(&mut payload).expect("Fail to read request body");
@@ -49,6 +51,7 @@ fn main() {
         println!("{:?}", payload);
 
         let mut file = match File::create(&key_path) {
+            // TODO: Return 500 Server Error
             Err(why) => panic!("couldn't create {}: {}",
                                key_path.display(),
                                why.description()),
@@ -57,6 +60,7 @@ fn main() {
 
         match file.write_all(payload.as_bytes()) {
             Err(why) => {
+                // TODO: Return 500 Server Error
                 panic!("couldn't write to {}: {}", key_path.display(),
                                                    why.description())
             },
@@ -69,7 +73,16 @@ fn main() {
     }
 
     fn delete(req: &mut Request) -> IronResult<Response> {
-        unimplemented!();
+        // TODO: Extract the key getting logic
+        let route_info = req.extensions.get::<Router>().unwrap();
+        let ref key = route_info.find("key").unwrap_or("");
+        // TODO: Do not allow file not in the current dir
+        let key_path = get_path(key);
+        match remove_file(key_path) {
+            // TODO: Return 500 Server Error
+            Err(why) => Ok(Response::with((status::Ok, "Not Ok"))),
+            Ok(_) => Ok(Response::with((status::Ok, "Ok")))
+        }
     }
 
 
