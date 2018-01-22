@@ -1,0 +1,8 @@
+[package]
+name = "ingotchest"
+version = "0.1.0"
+authors = ["Shing Lyu <shing.lyu@gmail.com>"]
+
+[dependencies]
+
+iron = "*"
