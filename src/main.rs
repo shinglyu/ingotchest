@@ -79,28 +79,28 @@ fn delete(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn main() {
-    env_logger::init();
-
+fn create_router() -> Router {
     let mut router = Router::new();
-    // TODO: Do we really need database?
-    // router.get("/:database/:key", get_by_key, "get_by_key");
     router.get("/:key", get, "get");
     router.put("/:key", put, "put");
     router.delete("/:key", delete, "delete");
 
+    router
+}
+
+fn main() {
+    env_logger::init();
 
     info!("Starting server on http://localhost:3000");
-    Iron::new(router).http("localhost:3000").unwrap();
+    Iron::new(create_router()).http("localhost:3000").unwrap();
 }
 
 #[test]
 fn test_put_invalid_json() {
-    let response = request::put("http://localhost:300/foo",
+    let response = request::put("http://localhost:3000/foo",
                                 Headers::new(), 
                                 "123 malformed json",
-                                &put
+                                &create_router()
                                ).unwrap();
-    //assert_eq!(response.status.unwrap(), status::BadRequest);
-    assert_eq!(response.status.unwrap(), status::Ok);
+    assert_eq!(response.status.unwrap(), status::BadRequest);
 }
