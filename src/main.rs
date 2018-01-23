@@ -1,5 +1,7 @@
 extern crate iron;
 extern crate router;
+#[macro_use] extern crate log;
+extern crate env_logger;
 
 use iron::prelude::*;
 use iron::status;
@@ -9,7 +11,10 @@ use std::fs::{File, remove_file};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+
 fn main() {
+    env_logger::init();
+
     let mut router = Router::new();
     // TODO: Do we really need database?
     // router.get("/:database/:key", get_by_key, "get_by_key");
@@ -28,8 +33,7 @@ fn main() {
         //let db_path = Path::new(database);
         //let key_path = db_path.join(key).with_extension("json");
         let key_path = get_path(key);
-        // TODO: proper logging
-        println!("GET {:?}", key_path);
+        debug!("GET {:?}", key_path);
         if !key_path.exists() {
             // TODO: Check what CouchDB return if database don't exist
             return Ok(Response::with((status::NotFound, format!("File not found: {:?}", key_path))))
@@ -48,7 +52,7 @@ fn main() {
         let mut payload = String::new();
         req.body.read_to_string(&mut payload).expect("Fail to read request body");
         // TODO: validate JSON
-        println!("{:?}", payload);
+        debug!("{:?}", payload);
 
         let mut file = match File::create(&key_path) {
             // TODO: Return 500 Server Error
@@ -64,8 +68,7 @@ fn main() {
                 panic!("couldn't write to {}: {}", key_path.display(),
                                                    why.description())
             },
-            // TODO: Proper logging
-            Ok(_) => println!("successfully wrote to {}", key_path.display()),
+            Ok(_) => debug!("successfully wrote to {}", key_path.display()),
         }
 
         // TODO: Return code?
@@ -86,6 +89,6 @@ fn main() {
     }
 
 
-    println!("Starting server on http://localhost:3000");
+    info!("Starting server on http://localhost:3000");
     Iron::new(router).http("localhost:3000").unwrap();
 }
