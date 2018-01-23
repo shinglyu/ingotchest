@@ -5,7 +5,8 @@ authors = ["Shing Lyu <shing.lyu@gmail.com>"]
 
 [dependencies]
 
-iron = "*"
-router = "*"
-log = "*"
 env_logger = "*"
+iron = "*"
+iron-test = "*"
+log = "*"
+router = "*"
