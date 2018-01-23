@@ -3,10 +3,11 @@ extern crate iron_test;
 extern crate router;
 #[macro_use] extern crate log;
 extern crate env_logger;
+extern crate serde;
+extern crate serde_json;
 
 use iron::prelude::*;
-use iron::{Headers, status};
-use iron_test::{request};
+use iron::{status};
 use router::Router;
 use std::error::Error;
 use std::fs::{File, remove_file};
@@ -44,6 +45,17 @@ fn put(req: &mut Request) -> IronResult<Response> {
     req.body.read_to_string(&mut payload).expect("Fail to read request body");
     // TODO: validate JSON
     debug!("{:?}", payload);
+    //if let Err(why) = serde_json::from_str(&payload) {
+    if let Err(why) = serde_json::from_str::<serde_json::Value>(&payload) {
+        return Ok(Response::with((status::BadRequest,
+                                  format!("{} at line {} column {}",
+                                          why.description(),
+                                          why.line(),
+                                          why.column(),
+                                         )
+                                 ))
+                 );
+    }
 
     let mut file = match File::create(&key_path) {
         // TODO: Return 500 Server Error
@@ -95,12 +107,22 @@ fn main() {
     Iron::new(create_router()).http("localhost:3000").unwrap();
 }
 
-#[test]
-fn test_put_invalid_json() {
-    let response = request::put("http://localhost:3000/foo",
-                                Headers::new(), 
-                                "123 malformed json",
-                                &create_router()
-                               ).unwrap();
-    assert_eq!(response.status.unwrap(), status::BadRequest);
+
+#[cfg(test)]
+mod test {
+    use iron::{Headers, status};
+    use iron_test::{request, response};
+    use super::{create_router};
+
+    #[test]
+    fn test_put_invalid_json() {
+        let response = request::put("http://localhost:3000/foo",
+                                    Headers::new(),
+                                    "123 malformed json",
+                                    &create_router()
+                                   ).unwrap();
+        assert_eq!(response.status.unwrap(), status::BadRequest);
+        let msg = response::extract_body_to_string(response);
+        assert_eq!(msg, "JSON error at line 1 column 5");
+    }
 }
