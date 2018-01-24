@@ -14,7 +14,7 @@ use std::io::{Read, Write};
 //    fn delete(&str) -> Result;
 //}
 fn get_path(key: &str) -> PathBuf {
-    return Path::new(key).with_extension("yaml");
+    return Path::new(key).with_extension("yml");
 }
 
 pub fn get(key: &str) -> Result<serde_value::Value, String> {
@@ -70,14 +70,14 @@ mod test {
 
         assert_eq!(put("foo", value), Ok(()));
         let mut contents = String::new();
-        let mut f = File::open("foo.yaml").expect("file not found");
+        let mut f = File::open("foo.yml").expect("file not found");
         f.read_to_string(&mut contents).expect("something went wrong reading the file");
         assert_eq!(contents, "---\nbar: 1\nhey: 2");
     }
 
     #[test]
     fn test_delete() {
-        let test_path = Path::new("test_delete.yaml");
+        let test_path = Path::new("test_delete.yml");
         File::create(test_path).unwrap();
         assert!(test_path.exists());
         assert_eq!(delete("test_delete"), Ok(()));
