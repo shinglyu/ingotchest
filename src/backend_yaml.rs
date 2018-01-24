@@ -4,7 +4,7 @@ extern crate serde_value;
 extern crate serde_yaml;
 
 use std::path::{Path, PathBuf};
-use std::fs::File;
+use std::fs::{File, remove_file};
 use std::io::{Read, Write};
 use std::error::Error;
 
@@ -29,7 +29,7 @@ pub fn get(key: &str) -> Result<serde_value::Value, String> {
     f.read_to_string(&mut contents).expect("something went wrong reading the file");
     match serde_yaml::from_str(&contents) {
         Ok(yaml) => Ok(yaml),
-        Err(why) => panic!("File is not valid. Crash to avoid losing the data.")
+        Err(_) => panic!("File is not valid. Crash to avoid losing the data.")
     }
 }
 
@@ -53,17 +53,33 @@ pub fn put(key: &str, value: serde_value::Value) -> Result<(), String> {
     }
 }
 
-pub fn delete(_key: &str) -> Result<(), &str> {
-    unimplemented!()
+pub fn delete(key: &str) -> Result<(), String> {
+    let key_path = get_path(key);
+    match remove_file(key_path) {
+        // TODO: Return 500 Server Error
+        Err(why) => Err(why.description().to_string()),
+        Ok(_) => Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
     extern crate serde_value;
     extern crate serde_json;
+
     use std::fs::File;
     use std::io::Read;
-    use super::{get, put};
+    use std::path::Path;
+
+    use super::{get, put, delete};
+
+    #[test]
+    fn test_get() {
+        let value: serde_value::Value = serde_json::from_str("{\"hello\": \"world\"}").unwrap(); 
+
+        assert_eq!(get("test_get"), Ok(value));
+        assert_eq!(get("test_get_doesnt_exist"), Err("entity not found".to_string()));
+    }
 
     #[test]
     fn test_put() {
@@ -77,10 +93,12 @@ mod test {
     }
 
     #[test]
-    fn test_get() {
-        let value: serde_value::Value = serde_json::from_str("{\"hello\": \"world\"}").unwrap(); 
-
-        assert_eq!(get("test_get"), Ok(value));
-        assert_eq!(get("test_get_doesnt_exist"), Err("entity not found".to_string()));
+    fn test_delete() {
+        let test_path = Path::new("test_delete.yaml");
+        File::create(test_path).unwrap();
+        assert!(test_path.exists());
+        assert_eq!(delete("test_delete"), Ok(()));
+        assert!(!test_path.exists());
     }
+
 }
