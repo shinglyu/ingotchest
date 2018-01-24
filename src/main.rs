@@ -24,18 +24,14 @@ fn get_path(key: &str) -> PathBuf {
 fn get(req: &mut Request) -> IronResult<Response> {
     let route_info = req.extensions.get::<Router>().unwrap();
     let ref key = route_info.find("key").unwrap_or("");
-    let key_path = get_path(key);
-    debug!("GET {:?}", key_path);
-
-    if !key_path.exists() {
-        // TODO: Check what CouchDB return if database don't exist
-        return Ok(Response::with((status::NotFound, format!("File not found: {:?}", key_path))))
+    let value: serde_value::Value = match backend_yaml::get(key) {
+        Ok(value) => value,
+        Err(why)  => return Ok(Response::with((status::NotFound, format!("Key not found: {:?}", key))))
+    };
+    match serde_json::to_string(&value) {
+        Ok(value) => Ok(Response::with((status::Ok, value))),
+        Err(why)  => Ok(Response::with((status::InternalServerError, "Can't serialize as JSON")))
     }
-
-    // FIXME: Read file everytime, try caching
-    // But the good point is we don't need to monitor if the file changes
-    // Check https://github.com/iron/staticfile for caching
-    Ok(Response::with((status::Ok, key_path)))
 }
 
 fn put(req: &mut Request) -> IronResult<Response> {
@@ -70,11 +66,9 @@ fn delete(req: &mut Request) -> IronResult<Response> {
     let route_info = req.extensions.get::<Router>().unwrap();
     let ref key = route_info.find("key").unwrap_or("");
     // TODO: Do not allow file not in the current dir
-    let key_path = get_path(key);
-    match remove_file(key_path) {
-        // TODO: Return 500 Server Error
-        Err(_) => Ok(Response::with((status::Ok, "Not Ok"))),
-        Ok(_) => Ok(Response::with((status::Ok, "Ok")))
+    match backend_yaml::delete(key) {
+        Ok(_) => Ok(Response::with((status::Ok, "Ok"))),
+        Err(why)  => Ok(Response::with((status::InternalServerError, why)))
     }
 }
 
