@@ -20,17 +20,17 @@ fn get_path(key: &str) -> PathBuf {
 
 fn get(req: &mut Request) -> IronResult<Response> {
     let route_info = req.extensions.get::<Router>().unwrap();
-    //let ref database = route_info.find("database").unwrap_or("");
     let ref key = route_info.find("key").unwrap_or("");
-    //let db_path = Path::new(database);
-    //let key_path = db_path.join(key).with_extension("json");
     let key_path = get_path(key);
     debug!("GET {:?}", key_path);
+
     if !key_path.exists() {
         // TODO: Check what CouchDB return if database don't exist
         return Ok(Response::with((status::NotFound, format!("File not found: {:?}", key_path))))
     }
+
     // FIXME: Read file everytime, try caching
+    // But the good point is we don't need to monitor if the file changes
     // Check https://github.com/iron/staticfile for caching
     Ok(Response::with((status::Ok, key_path)))
 }
@@ -43,9 +43,8 @@ fn put(req: &mut Request) -> IronResult<Response> {
     let key_path = get_path(key);
     let mut payload = String::new();
     req.body.read_to_string(&mut payload).expect("Fail to read request body");
-    // TODO: validate JSON
     debug!("{:?}", payload);
-    //if let Err(why) = serde_json::from_str(&payload) {
+    // Validate JSON format
     if let Err(why) = serde_json::from_str::<serde_json::Value>(&payload) {
         return Ok(Response::with((status::BadRequest,
                                   format!("{} at line {} column {}",
