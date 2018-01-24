@@ -13,24 +13,18 @@ use iron::prelude::*;
 use iron::{status};
 use router::Router;
 use std::error::Error;
-use std::fs::{remove_file};
 use std::io::{Read};
-use std::path::{Path, PathBuf};
-
-fn get_path(key: &str) -> PathBuf {
-    return Path::new(key).with_extension("json");
-}
 
 fn get(req: &mut Request) -> IronResult<Response> {
     let route_info = req.extensions.get::<Router>().unwrap();
     let ref key = route_info.find("key").unwrap_or("");
     let value: serde_value::Value = match backend_yaml::get(key) {
         Ok(value) => value,
-        Err(why)  => return Ok(Response::with((status::NotFound, format!("Key not found: {:?}", key))))
+        Err(_)  => return Ok(Response::with((status::NotFound, format!("Key not found: {:?}", key))))
     };
     match serde_json::to_string(&value) {
         Ok(value) => Ok(Response::with((status::Ok, value))),
-        Err(why)  => Ok(Response::with((status::InternalServerError, "Can't serialize as JSON")))
+        Err(_)  => Ok(Response::with((status::InternalServerError, "Can't serialize as JSON")))
     }
 }
 
