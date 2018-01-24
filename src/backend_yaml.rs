@@ -5,7 +5,7 @@ extern crate serde_yaml;
 
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::error::Error;
 
 //TODO: Extract this trait when we have more backend type
@@ -18,8 +18,19 @@ fn get_path(key: &str) -> PathBuf {
     return Path::new(key).with_extension("yaml");
 }
 
-pub fn get(_key: &str) -> serde_value::Value {
-    unimplemented!()
+pub fn get(key: &str) -> Result<serde_value::Value, String> {
+    let key_path = get_path(key);
+    let mut contents = String::new();
+    let mut f = match File::open(&key_path) {
+        Ok(f) => f,
+        Err(why) => return Err(why.description().to_string()),
+    };
+    // TODO: We crash if the file is corrupted, find better way to handle this
+    f.read_to_string(&mut contents).expect("something went wrong reading the file");
+    match serde_yaml::from_str(&contents) {
+        Ok(yaml) => Ok(yaml),
+        Err(why) => panic!("File is not valid. Crash to avoid losing the data.")
+    }
 }
 
 pub fn put(key: &str, value: serde_value::Value) -> Result<(), String> {
@@ -52,7 +63,7 @@ mod test {
     extern crate serde_json;
     use std::fs::File;
     use std::io::Read;
-    use super::{put};
+    use super::{get, put};
 
     #[test]
     fn test_put() {
@@ -63,5 +74,13 @@ mod test {
         let mut f = File::open("foo.yaml").expect("file not found");
         f.read_to_string(&mut contents).expect("something went wrong reading the file");
         assert_eq!(contents, "---\nbar: 1\nhey: 2");
+    }
+
+    #[test]
+    fn test_get() {
+        let value: serde_value::Value = serde_json::from_str("{\"hello\": \"world\"}").unwrap(); 
+
+        assert_eq!(get("test_get"), Ok(value));
+        assert_eq!(get("test_get_doesnt_exist"), Err("entity not found".to_string()));
     }
 }
