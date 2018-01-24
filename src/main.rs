@@ -11,6 +11,7 @@ mod backend_yaml;
 
 use iron::prelude::*;
 use iron::{status};
+use iron::headers::ContentType;
 use router::Router;
 use std::error::Error;
 use std::io::{Read};
@@ -23,7 +24,11 @@ fn get(req: &mut Request) -> IronResult<Response> {
         Err(_)  => return Ok(Response::with((status::NotFound, format!("Key not found: {:?}", key))))
     };
     match serde_json::to_string(&value) {
-        Ok(value) => Ok(Response::with((status::Ok, value))),
+        Ok(value) => {
+            let mut resp = Response::with((status::Ok, value));
+            resp.headers.set(ContentType::json());
+            Ok(resp)
+        }
         Err(_)  => Ok(Response::with((status::InternalServerError, "Can't serialize as JSON")))
     }
 }
@@ -61,7 +66,9 @@ fn delete(req: &mut Request) -> IronResult<Response> {
     let ref key = route_info.find("key").unwrap_or("");
     // TODO: Do not allow file not in the current dir
     match backend_yaml::delete(key) {
-        Ok(_) => Ok(Response::with((status::Ok, "Ok"))),
+        Ok(_) => {
+            Ok(Response::with((status::Ok, "Ok")))
+        },
         Err(why)  => Ok(Response::with((status::InternalServerError, why)))
     }
 }
@@ -86,9 +93,22 @@ fn main() {
 #[cfg(test)]
 mod test {
     use iron::{Headers, status};
+    use iron::headers::ContentType;
     use iron_test::{request, response};
     use super::{create_router};
 
+    #[test]
+    fn test_get_content_type() {
+        let response = request::get("http://localhost:3000/test_get",
+                                    Headers::new(),
+                                    &create_router()
+                                   ).unwrap();
+        assert_eq!(response.status.unwrap(), status::Ok);
+        assert!(response.headers.has::<ContentType>());
+        assert_eq!(response.headers.get::<ContentType>().unwrap(), &ContentType::json());
+        let msg = response::extract_body_to_string(response);
+        assert_eq!(msg, "{\"hello\":\"world\"}");
+    }
     #[test]
     fn test_put_invalid_json() {
         let response = request::put("http://localhost:3000/foo",
