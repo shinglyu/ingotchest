@@ -8,6 +8,7 @@ authors = ["Shing Lyu <shing.lyu@gmail.com>"]
 env_logger = "*"
 iron = "*"
 iron-test = "*"
+iron-cors = "*"
 log = "*"
 router = "*"
 serde = "*"
