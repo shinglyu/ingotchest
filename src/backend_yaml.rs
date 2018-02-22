@@ -4,6 +4,7 @@ extern crate serde_value;
 extern crate serde_yaml;
 
 use std::path::{Path, PathBuf};
+use std::error::Error;
 use std::fs::{File, remove_file, copy};
 use std::io::{Read, Write};
 
@@ -25,7 +26,8 @@ pub fn get(key: &str) -> Result<serde_value::Value, String> {
     f.read_to_string(&mut contents).expect("something went wrong reading the file");
     match serde_yaml::from_str(&contents) {
         Ok(yaml) => Ok(yaml),
-        Err(_) => panic!("File is not valid. Crash to avoid losing the data.")
+        Err(e) => panic!("File is not valid YAML. Crash to avoid losing the data.\n{} at line {} column {}",
+                         e.description(), e.location().unwrap().line(), e.location().unwrap().column())
     }
 }
 
